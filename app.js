@@ -122,7 +122,7 @@ function renderRows() {
     const isVector = i === 0;
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td class="role-tag ${isVector ? "role-vector" : ""}">${isVector ? "vector" : "insert"}</td>
+      <td class="col-role"><span class="role-tag ${isVector ? "role-vector" : ""}">${isVector ? "vector" : "insert"}</span></td>
       <td><input class="cell label-cell" type="text" data-i="${i}" data-k="label" value="${escapeHtml(f.label)}" placeholder="frag ${i + 1}" /></td>
       <td><input class="cell in-cell" type="number" min="0" step="any" data-i="${i}" data-k="length" value="${f.length}" /></td>
       <td><input class="cell in-cell" type="number" min="0" step="any" data-i="${i}" data-k="conc" value="${f.conc}" /></td>
@@ -157,19 +157,32 @@ function recalc() {
   const res = computeFragments(frags, vMax);
   lastResult = res;
 
+  // Update a cell's text and give it a celebratory "bump" when it goes
+  // from blank ("—") to a real value (i.e. the reaction just became solvable).
+  const setOut = (el, text) => {
+    if (!el) return;
+    const wasBlank = el.textContent === "—";
+    el.textContent = text;
+    if (wasBlank && text !== "—" && el.classList.contains("out-cell")) {
+      el.classList.remove("bump");
+      void el.offsetWidth; // restart animation
+      el.classList.add("bump");
+    }
+  };
+
   const rows = body.querySelectorAll("tr");
   rows.forEach((tr, i) => {
     const r = res.rows[i];
-    tr.querySelector('[data-out="vol"]').textContent = fmt(r.vol, 2);
-    tr.querySelector('[data-out="mass"]').textContent = fmt(r.mass, 1);
-    tr.querySelector('[data-out="amt"]').textContent = fmt(r.amt, 3);
+    setOut(tr.querySelector('[data-out="vol"]'), fmt(r.vol, 2));
+    setOut(tr.querySelector('[data-out="mass"]'), fmt(r.mass, 1));
+    setOut(tr.querySelector('[data-out="amt"]'), fmt(r.amt, 3));
     tr.querySelector('[data-out="fold"]').textContent =
       r.foldUsed == null ? "—" : fmt(r.foldUsed, r.foldUsed % 1 ? 1 : 0);
   });
 
-  $("out-water").textContent = fmt(res.water, 2);
-  $("out-total-vol").textContent = fmt(res.m1 != null ? res.totalVol : null, 2);
-  $("out-total-amt").textContent = fmt(res.m1 != null ? res.totalAmt : null, 3);
+  setOut($("out-water"), fmt(res.water, 2));
+  setOut($("out-total-vol"), fmt(res.m1 != null ? res.totalVol : null, 2));
+  setOut($("out-total-amt"), fmt(res.m1 != null ? res.totalAmt : null, 3));
   $("ro-pmax").textContent = `${res.pMax} pmol`;
   $("ro-m1").textContent = res.m1 == null ? "—" : `${fmt(res.m1, 2)} ng`;
 }
@@ -207,14 +220,14 @@ $("btn-example").addEventListener("click", () => {
   state = structuredClone(EXAMPLE);
   $("v-max").value = state.vMax;
   renderRows();
-  toast("Example loaded");
+  toast("✨ Example loaded — happy cloning!");
 });
 
 $("btn-reset").addEventListener("click", () => {
   state = structuredClone(BLANK);
   $("v-max").value = state.vMax;
   renderRows();
-  toast("Reset");
+  toast("🧼 Clean slate!");
 });
 
 /* ---------- Export / copy ---------- */
@@ -248,7 +261,7 @@ $("btn-csv").addEventListener("click", () => {
   a.download = "gibson-assembly.csv";
   a.click();
   URL.revokeObjectURL(a.href);
-  toast("CSV exported");
+  toast("💾 CSV exported!");
 });
 
 $("btn-copy").addEventListener("click", async () => {
@@ -256,9 +269,9 @@ $("btn-copy").addEventListener("click", async () => {
   const text = [header, ...lines].map((r) => r.join("\t")).join("\n");
   try {
     await navigator.clipboard.writeText(text);
-    toast("Results copied");
+    toast("📋 Copied to clipboard!");
   } catch {
-    toast("Copy failed — select manually");
+    toast("😬 Copy failed — select manually");
   }
 });
 

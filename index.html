@@ -5,20 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gibson Assembly Calculator</title>
   <meta name="description" content="Calculate the volume of each DNA fragment and water to pipette into a Gibson Assembly reaction." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="site-header">
+    <div class="dna-strip" aria-hidden="true">
+      <span>A</span><span>T</span><span>G</span><span>C</span><span>A</span><span>T</span><span>G</span><span>C</span><span>A</span><span>T</span><span>G</span><span>C</span><span>A</span><span>T</span><span>G</span><span>C</span><span>A</span><span>T</span><span>G</span><span>C</span><span>A</span><span>T</span><span>G</span><span>C</span>
+    </div>
     <div class="wrap">
-      <h1>Gibson Assembly Calculator</h1>
-      <p class="tagline">Enter each fragment's length and concentration — get the volume of each fragment and water to pipette.</p>
+      <h1><span class="dna-emoji">🧬</span> Gibson Assembly Calculator</h1>
+      <p class="tagline">Punch in each fragment's length &amp; concentration — get the exact µL to pipette. No more squinting at a spreadsheet. 🔬</p>
     </div>
   </header>
 
   <main class="wrap">
     <section class="panel" aria-labelledby="frag-heading">
       <div class="panel-head">
-        <h2 id="frag-heading">Fragments</h2>
+        <h2 id="frag-heading">🧩 Fragments</h2>
         <span class="legend">
           <span class="legend-item"><span class="swatch swatch-input"></span> input</span>
           <span class="legend-item"><span class="swatch swatch-output"></span> calculated</span>
@@ -62,12 +68,12 @@
       </div>
 
       <div class="row-actions">
-        <button id="btn-add" type="button" class="btn">＋ Add fragment</button>
+        <button id="btn-add" type="button" class="btn">＋ Add a fragment</button>
       </div>
     </section>
 
     <section class="panel params" aria-labelledby="param-heading">
-      <h2 id="param-heading">Reaction parameters</h2>
+      <h2 id="param-heading">⚗️ Reaction parameters</h2>
       <div class="param-grid">
         <label class="param">
           <span>v<sub>max</sub> — volume for fragments (µL)</span>
@@ -93,9 +99,9 @@
     </section>
 
     <section class="toolbar" aria-label="Actions">
-      <button id="btn-example" type="button" class="btn">Load example</button>
-      <button id="btn-copy" type="button" class="btn">Copy results</button>
-      <button id="btn-csv" type="button" class="btn">Export CSV</button>
+      <button id="btn-example" type="button" class="btn">✨ Load example</button>
+      <button id="btn-copy" type="button" class="btn">📋 Copy results</button>
+      <button id="btn-csv" type="button" class="btn">💾 Export CSV</button>
       <span class="spacer"></span>
       <input type="text" id="preset-name" class="preset-name" placeholder="Preset name…" aria-label="Preset name" />
       <button id="btn-save" type="button" class="btn">Save</button>
@@ -107,7 +113,7 @@
     </section>
 
     <details class="panel help">
-      <summary><h2>How to use</h2></summary>
+      <summary><h2>🧪 How to use</h2></summary>
       <ol>
         <li>Enter the <strong>length</strong> and <strong>concentration</strong> for each fragment in the green cells.</li>
         <li>Labels are optional and may be overwritten.</li>
@@ -119,7 +125,7 @@
     </details>
 
     <details class="panel help">
-      <summary><h2>How it works</h2></summary>
+      <summary><h2>🤓 How it works</h2></summary>
       <p>The volume of the <em>n</em>-th fragment is</p>
       <div class="formula">
         v<sub>n</sub> = ( f<sub>n</sub> · l<sub>n</sub> / c<sub>n</sub> ) · ( m<sub>1</sub> / l<sub>1</sub> ),
@@ -150,7 +156,16 @@
 
   <footer class="site-footer">
     <div class="wrap">
-      <p>Based on the “Bens Gibson Assembly” spreadsheet by Ben. Web app — open source, runs entirely in your browser.</p>
+      <p class="cite">
+        🧬 This calculator is a web port of <strong>Ben's Gibson Assembly calculator</strong> from the
+        <a href="https://barricklab.org/twiki/bin/view/Lab/ProtocolsGibsonCloning" target="_blank" rel="noopener">Barrick Lab Gibson Cloning protocol</a>
+        (Barrick Lab, Michigan State University). All credit for the underlying method goes to them.
+      </p>
+      <p class="cite">
+        📄 Grab the original spreadsheet:
+        <a href="Bens_Gibson_Assembly.xlsx" download>Bens_Gibson_Assembly.xlsx</a>
+        &nbsp;·&nbsp; Open source, runs entirely in your browser — nothing leaves your machine.
+      </p>
     </div>
   </footer>
 
