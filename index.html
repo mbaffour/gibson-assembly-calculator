@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gibson Assembly Calculator</title>
+  <meta name="description" content="Calculate the volume of each DNA fragment and water to pipette into a Gibson Assembly reaction." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <h1>Gibson Assembly Calculator</h1>
+      <p class="tagline">Enter each fragment's length and concentration — get the volume of each fragment and water to pipette.</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="panel" aria-labelledby="frag-heading">
+      <div class="panel-head">
+        <h2 id="frag-heading">Fragments</h2>
+        <span class="legend">
+          <span class="legend-item"><span class="swatch swatch-input"></span> input</span>
+          <span class="legend-item"><span class="swatch swatch-output"></span> calculated</span>
+        </span>
+      </div>
+
+      <div class="table-scroll">
+        <table id="frag-table">
+          <thead>
+            <tr>
+              <th class="col-role"></th>
+              <th class="col-label">Label</th>
+              <th class="col-in">Length<br /><span class="unit">bp</span></th>
+              <th class="col-in">Conc.<br /><span class="unit">ng/µL</span></th>
+              <th class="col-in">Fold excess<br /><span class="unit">optional</span></th>
+              <th class="col-out">Volume<br /><span class="unit">µL</span></th>
+              <th class="col-out">Mass<br /><span class="unit">ng</span></th>
+              <th class="col-out">Amount<br /><span class="unit">pmol</span></th>
+              <th class="col-out">Fold<br /><span class="unit">used</span></th>
+              <th class="col-act"></th>
+            </tr>
+          </thead>
+          <tbody id="frag-body"><!-- rows injected by app.js --></tbody>
+          <tfoot>
+            <tr class="water-row">
+              <td></td>
+              <td colspan="4" class="right">Water (H₂O)</td>
+              <td id="out-water" class="num out-cell">—</td>
+              <td colspan="4"></td>
+            </tr>
+            <tr class="total-row">
+              <td></td>
+              <td colspan="4" class="right">Total</td>
+              <td id="out-total-vol" class="num out-cell">—</td>
+              <td></td>
+              <td id="out-total-amt" class="num out-cell">—</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="row-actions">
+        <button id="btn-add" type="button" class="btn">＋ Add fragment</button>
+      </div>
+    </section>
+
+    <section class="panel params" aria-labelledby="param-heading">
+      <h2 id="param-heading">Reaction parameters</h2>
+      <div class="param-grid">
+        <label class="param">
+          <span>v<sub>max</sub> — volume for fragments (µL)</span>
+          <input type="number" id="v-max" min="0" step="0.1" value="5" />
+          <small>5 µL leaves room for 1.33× master mix.</small>
+        </label>
+        <div class="param readout">
+          <span>m<sub>max</sub></span>
+          <output>100 ng</output>
+          <small>Max vector mass (fixed).</small>
+        </div>
+        <div class="param readout">
+          <span>p<sub>max</sub></span>
+          <output id="ro-pmax">0.5 pmol</output>
+          <small>0.5 pmol for 2–3 frags, 1 pmol for 4+.</small>
+        </div>
+        <div class="param readout">
+          <span>m<sub>1</sub> — vector mass</span>
+          <output id="ro-m1">—</output>
+          <small>min of the three limits (see below).</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="Actions">
+      <button id="btn-example" type="button" class="btn">Load example</button>
+      <button id="btn-copy" type="button" class="btn">Copy results</button>
+      <button id="btn-csv" type="button" class="btn">Export CSV</button>
+      <span class="spacer"></span>
+      <input type="text" id="preset-name" class="preset-name" placeholder="Preset name…" aria-label="Preset name" />
+      <button id="btn-save" type="button" class="btn">Save</button>
+      <select id="preset-select" class="preset-select" aria-label="Saved presets"></select>
+      <button id="btn-load" type="button" class="btn">Load</button>
+      <button id="btn-del" type="button" class="btn btn-quiet">Delete</button>
+      <span class="spacer"></span>
+      <button id="btn-reset" type="button" class="btn btn-quiet">Reset</button>
+    </section>
+
+    <details class="panel help">
+      <summary><h2>How to use</h2></summary>
+      <ol>
+        <li>Enter the <strong>length</strong> and <strong>concentration</strong> for each fragment in the green cells.</li>
+        <li>Labels are optional and may be overwritten.</li>
+        <li>By default, NEB-recommended molar fold excesses are used. If there is no vector
+            fragment, use the largest fragment as the “vector” (row 1): its fold excess is 1,
+            and you can manually set the fold excesses of the other fragments.</li>
+        <li>Read off the volume to pipette for each fragment and for water (blue cells).</li>
+      </ol>
+    </details>
+
+    <details class="panel help">
+      <summary><h2>How it works</h2></summary>
+      <p>The volume of the <em>n</em>-th fragment is</p>
+      <div class="formula">
+        v<sub>n</sub> = ( f<sub>n</sub> · l<sub>n</sub> / c<sub>n</sub> ) · ( m<sub>1</sub> / l<sub>1</sub> ),
+        &nbsp; where &nbsp;
+        m<sub>1</sub> = <strong>min</strong>(
+        l<sub>1</sub>·v<sub>max</sub> / Σ (f<sub>n</sub>l<sub>n</sub>/c<sub>n</sub>),
+        &nbsp; φ·l<sub>1</sub>·p<sub>max</sub> / Σ f<sub>n</sub>,
+        &nbsp; m<sub>max</sub> )
+      </div>
+      <table class="glossary">
+        <tbody>
+          <tr><td>n</td><td>number of fragments</td></tr>
+          <tr><td>v<sub>n</sub></td><td>volume of <em>n</em>-th fragment (µL)</td></tr>
+          <tr><td>f<sub>n</sub></td><td>molar fold excess of <em>n</em>-th fragment</td></tr>
+          <tr><td>l<sub>n</sub></td><td>length of <em>n</em>-th fragment (bp)</td></tr>
+          <tr><td>l<sub>1</sub></td><td>length of the vector (bp)</td></tr>
+          <tr><td>m<sub>n</sub></td><td>mass of <em>n</em>-th fragment (ng)</td></tr>
+          <tr><td>m<sub>1</sub></td><td>mass of the vector (ng)</td></tr>
+          <tr><td>c<sub>n</sub></td><td>concentration of <em>n</em>-th fragment (ng/µL)</td></tr>
+          <tr><td>v<sub>max</sub></td><td>volume available for fragments (5 µL for 1.33× master mix)</td></tr>
+          <tr><td>m<sub>max</sub></td><td>optimally 100 ng</td></tr>
+          <tr><td>p<sub>max</sub></td><td>optimally 0.5 pmol (2–3 frags) or 1 pmol (4+ frags)</td></tr>
+          <tr><td>φ</td><td>0.66 ng/pmol/bp (conversion factor)</td></tr>
+        </tbody>
+      </table>
+    </details>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Based on the “Bens Gibson Assembly” spreadsheet by Ben. Web app — open source, runs entirely in your browser.</p>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
