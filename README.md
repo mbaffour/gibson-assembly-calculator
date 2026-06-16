@@ -4,7 +4,13 @@ A browser-based calculator for setting up a [Gibson Assembly](https://www.neb.co
 
 **Live app:** https://mbaffour.github.io/gibson-assembly-calculator/
 
-It is a faithful web port of the original `Bens_Gibson_Assembly.xlsx` spreadsheet (by Ben), kept in this repo for provenance.
+## Credit
+
+This is a faithful web port of **Ben's Gibson Assembly calculator** from the
+[Barrick Lab Gibson Cloning protocol](https://barricklab.org/twiki/bin/view/Lab/ProtocolsGibsonCloning)
+(Barrick Lab, Michigan State University). All credit for the underlying method and
+spreadsheet goes to them. The original spreadsheet — [`Bens_Gibson_Assembly.xlsx`](Bens_Gibson_Assembly.xlsx) —
+is kept in this repo for provenance.
 
 ## Features
 
