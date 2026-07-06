@@ -207,6 +207,13 @@ tfoot td { border-top: 2px solid var(--line); border-bottom: none; padding-top: 
 .preset-name:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108, 76, 255, 0.16); }
 .preset-select { font: inherit; padding: 8px 9px; border: 1.5px solid var(--line); border-radius: 11px; background: #fff; }
 
+/* ---------- Master mix ---------- */
+.mastermix h2 { margin: 0 0 4px; font-family: "Fredoka", sans-serif; font-weight: 600; font-size: 1.25rem; }
+.mm-note { margin: 0 0 6px; color: var(--muted); font-size: 0.88rem; }
+#mm-table { min-width: 340px; }
+#mm-table th.col-label { text-align: left; }
+#mm-table td:first-child { font-weight: 500; }
+
 /* ---------- Help / details ---------- */
 .help summary { cursor: pointer; list-style: none; }
 .help summary::-webkit-details-marker { display: none; }
