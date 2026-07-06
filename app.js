@@ -10,8 +10,13 @@ const M_MAX = 100;    // ng
 /* ---------- Calculation engine (pure) ---------- */
 
 // Default molar fold excess when the user leaves it blank.
-function defaultFold(frag, isVector) {
+// A positive `customFold` overrides the NEB defaults for inserts (the vector
+// stays at 1×). Blank / non-positive falls back to the NEB rule.
+function defaultFold(frag, isVector, customFold) {
   if (isVector) return 1;
+  if (customFold != null && customFold !== "" && Number(customFold) > 0) {
+    return Number(customFold);
+  }
   return frag.length <= 200 ? 5 : 2.5;
 }
 
@@ -23,9 +28,10 @@ function isActive(f) {
 /**
  * @param {Array<{label,length,conc,fold}>} frags  fold may be null/'' for default
  * @param {number} vMax  volume available for fragments (µL)
+ * @param {number|string} [customFold]  optional custom default fold for inserts
  * @returns {{rows, m1, pMax, numFrags, totalVol, water, totalAmt}}
  */
-function computeFragments(frags, vMax) {
+function computeFragments(frags, vMax, customFold) {
   const numFrags = frags.filter((f) => f.length > 0).length;
   const pMax = numFrags < 4 ? 0.5 : 1;
 
@@ -36,7 +42,7 @@ function computeFragments(frags, vMax) {
   const folds = frags.map((f, i) =>
     f.fold != null && f.fold !== "" && !Number.isNaN(f.fold)
       ? Number(f.fold)
-      : defaultFold(f, i === 0)
+      : defaultFold(f, i === 0, customFold)
   );
 
   // O_n = f_n * l_n / c_n, summed over active fragments.
@@ -78,6 +84,8 @@ function computeFragments(frags, vMax) {
 
 const EXAMPLE = {
   vMax: 5,
+  defaultFold: "",
+  nReactions: 1,
   frags: [
     { label: "vector", length: 7000, conc: 30, fold: "" },
     { label: "insert 1", length: 2000, conc: 9, fold: 3 },
@@ -87,6 +95,8 @@ const EXAMPLE = {
 
 const BLANK = {
   vMax: 5,
+  defaultFold: "",
+  nReactions: 1,
   frags: [
     { label: "vector", length: "", conc: "", fold: "" },
     { label: "insert 1", length: "", conc: "", fold: "" },
@@ -154,7 +164,7 @@ function recalc() {
     fold: f.fold,
   }));
   const vMax = Number(state.vMax) || 0;
-  const res = computeFragments(frags, vMax);
+  const res = computeFragments(frags, vMax, state.defaultFold);
   lastResult = res;
 
   // Update a cell's text and give it a celebratory "bump" when it goes
@@ -185,6 +195,49 @@ function recalc() {
   setOut($("out-total-amt"), fmt(res.m1 != null ? res.totalAmt : null, 3));
   $("ro-pmax").textContent = `${res.pMax} pmol`;
   $("ro-m1").textContent = res.m1 == null ? "—" : `${fmt(res.m1, 2)} ng`;
+
+  renderMasterMix(res);
+}
+
+// Master-mix multiplier: scale each fragment + water volume by N reactions.
+// Purely a display of the per-reaction result × N — the core formula is untouched.
+function nReactions() {
+  const n = Math.floor(Number(state.nReactions));
+  return Number.isFinite(n) && n >= 1 ? n : 1;
+}
+
+function renderMasterMix(res) {
+  const panel = $("mastermix");
+  const n = nReactions();
+  const solvable = res.m1 != null;
+
+  // Only surface the panel when it adds information (N > 1 and a solvable rxn).
+  if (n <= 1 || !solvable) {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  $("mm-n").textContent = n;
+  $("mm-n2").textContent = n;
+
+  const mmBody = $("mm-body");
+  mmBody.innerHTML = "";
+  state.frags.forEach((f, i) => {
+    const r = res.rows[i];
+    if (r.vol == null) return;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(f.label || `frag ${i + 1}`)}</td>
+      <td class="num out-cell">${fmt(r.vol * n, 2)}</td>`;
+    mmBody.appendChild(tr);
+  });
+  const waterTr = document.createElement("tr");
+  waterTr.innerHTML = `
+    <td>Water (H₂O)</td>
+    <td class="num out-cell">${fmt((res.water ?? 0) * n, 2)}</td>`;
+  mmBody.appendChild(waterTr);
+
+  $("mm-total").textContent = fmt(res.totalVol * n + (res.water ?? 0) * n, 2);
 }
 
 /* ---------- Events ---------- */
@@ -216,16 +269,34 @@ $("v-max").addEventListener("input", (e) => {
   recalc();
 });
 
+$("default-fold").addEventListener("input", (e) => {
+  state.defaultFold = e.target.value;
+  recalc();
+});
+
+$("n-reactions").addEventListener("input", (e) => {
+  state.nReactions = e.target.value;
+  recalc();
+});
+
+// Reflect the current state's reaction parameters into their input controls.
+// Tolerates older presets that predate the newer params.
+function syncParamInputs() {
+  $("v-max").value = state.vMax;
+  $("default-fold").value = state.defaultFold ?? "";
+  $("n-reactions").value = state.nReactions ?? 1;
+}
+
 $("btn-example").addEventListener("click", () => {
   state = structuredClone(EXAMPLE);
-  $("v-max").value = state.vMax;
+  syncParamInputs();
   renderRows();
   toast("✨ Example loaded — happy cloning!");
 });
 
 $("btn-reset").addEventListener("click", () => {
   state = structuredClone(BLANK);
-  $("v-max").value = state.vMax;
+  syncParamInputs();
   renderRows();
   toast("🧼 Clean slate!");
 });
@@ -233,10 +304,14 @@ $("btn-reset").addEventListener("click", () => {
 /* ---------- Export / copy ---------- */
 
 function resultTable() {
+  const n = nReactions();
+  const scaled = n > 1; // append a master-mix column only when it adds info
   const header = ["role", "label", "length(bp)", "conc(ng/uL)", "fold", "volume(uL)", "mass(ng)", "amount(pmol)"];
+  if (scaled) header.push(`volume x${n}(uL)`);
+
   const lines = state.frags.map((f, i) => {
     const r = lastResult.rows[i];
-    return [
+    const row = [
       i === 0 ? "vector" : "insert",
       f.label || `frag ${i + 1}`,
       f.length, f.conc,
@@ -245,8 +320,14 @@ function resultTable() {
       r.mass != null ? r.mass.toFixed(1) : "",
       r.amt != null ? r.amt.toFixed(3) : "",
     ];
+    if (scaled) row.push(r.vol != null ? (r.vol * n).toFixed(2) : "");
+    return row;
   });
-  lines.push(["", "Water (H2O)", "", "", "", lastResult.water != null ? lastResult.water.toFixed(2) : "", "", ""]);
+
+  const water = lastResult.water;
+  const waterRow = ["", "Water (H2O)", "", "", "", water != null ? water.toFixed(2) : "", "", ""];
+  if (scaled) waterRow.push(water != null ? (water * n).toFixed(2) : "");
+  lines.push(waterRow);
   return { header, lines };
 }
 
@@ -262,6 +343,84 @@ $("btn-csv").addEventListener("click", () => {
   a.click();
   URL.revokeObjectURL(a.href);
   toast("💾 CSV exported!");
+});
+
+// Printable protocol: opens a clean, self-contained page ready for the browser's
+// print / "Save as PDF" dialog. Uses the same computed results as the on-page table.
+$("btn-print").addEventListener("click", () => {
+  if (lastResult == null || lastResult.m1 == null) {
+    return toast("Enter fragment lengths & concentrations first");
+  }
+  const n = nReactions();
+  const scaled = n > 1;
+  const res = lastResult;
+
+  const rowsHtml = state.frags
+    .map((f, i) => {
+      const r = res.rows[i];
+      if (r.vol == null) return "";
+      const scaledCell = scaled ? `<td class="num">${fmt(r.vol * n, 2)}</td>` : "";
+      return `<tr>
+        <td>${escapeHtml(f.label || `frag ${i + 1}`)}</td>
+        <td>${i === 0 ? "vector" : "insert"}</td>
+        <td class="num">${escapeHtml(f.length)}</td>
+        <td class="num">${escapeHtml(f.conc)}</td>
+        <td class="num">${r.foldUsed == null ? "—" : fmt(r.foldUsed, r.foldUsed % 1 ? 1 : 0)}</td>
+        <td class="num">${fmt(r.vol, 2)}</td>
+        ${scaledCell}
+      </tr>`;
+    })
+    .join("");
+
+  const waterScaled = scaled ? `<td class="num">${fmt((res.water ?? 0) * n, 2)}</td>` : "";
+  const scaledHead = scaled ? `<th class="num">Vol ×${n} (µL)</th>` : "";
+  const title = "Gibson Assembly protocol";
+
+  const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" />
+<title>${title}</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #221d3a; margin: 32px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .meta { color: #6a6386; font-size: 0.9rem; margin: 0 0 18px; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 20px; }
+  th, td { border: 1px solid #d8d3ec; padding: 6px 10px; text-align: left; font-size: 0.9rem; }
+  th { background: #f3effe; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 0.9rem; max-width: 420px; }
+  dt { color: #6a6386; } dd { margin: 0; font-weight: 600; }
+  @media print { body { margin: 0; } }
+</style></head>
+<body>
+  <h1>🧬 ${title}</h1>
+  <p class="meta">Generated ${new Date().toLocaleString()}${scaled ? ` · master mix for ${n} reactions` : ""}</p>
+  <dl>
+    <dt>v<sub>max</sub></dt><dd>${escapeHtml(state.vMax)} µL</dd>
+    <dt>p<sub>max</sub></dt><dd>${res.pMax} pmol</dd>
+    <dt>Vector mass m<sub>1</sub></dt><dd>${fmt(res.m1, 2)} ng</dd>
+    <dt>Default insert fold</dt><dd>${state.defaultFold ? escapeHtml(state.defaultFold) + "×" : "NEB auto"}</dd>
+    <dt>Reactions (N)</dt><dd>${n}</dd>
+  </dl>
+  <table>
+    <thead><tr>
+      <th>Label</th><th>Role</th><th class="num">Length (bp)</th><th class="num">Conc (ng/µL)</th>
+      <th class="num">Fold</th><th class="num">Vol (µL)</th>${scaledHead}
+    </tr></thead>
+    <tbody>
+      ${rowsHtml}
+      <tr><td>Water (H₂O)</td><td></td><td></td><td></td><td></td><td class="num">${fmt(res.water, 2)}</td>${waterScaled}</tr>
+      <tr><th>Total</th><td></td><td></td><td></td><td></td><th class="num">${fmt(res.totalVol + (res.water ?? 0), 2)}</th>${scaled ? `<th class="num">${fmt((res.totalVol + (res.water ?? 0)) * n, 2)}</th>` : ""}</tr>
+    </tbody>
+  </table>
+  <p class="meta">Web port of Ben's Gibson Assembly calculator (Barrick Lab). Combine fragments + water, then add master mix per your kit's protocol.</p>
+  <script>window.onload = function () { window.print(); };<\/script>
+</body></html>`;
+
+  const w = window.open("", "_blank");
+  if (!w) return toast("😬 Pop-up blocked — allow pop-ups to print");
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  toast("🖨️ Protocol ready to print");
 });
 
 $("btn-copy").addEventListener("click", async () => {
@@ -314,7 +473,7 @@ $("btn-load").addEventListener("click", () => {
   const presets = loadPresets();
   if (!name || !presets[name]) return toast("No preset selected");
   state = structuredClone(presets[name]);
-  $("v-max").value = state.vMax;
+  syncParamInputs();
   renderRows();
   toast(`Loaded “${name}”`);
 });

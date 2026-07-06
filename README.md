@@ -17,8 +17,10 @@ is kept in this repo for provenance.
 - Live recalculation as you type
 - Add / remove fragment rows (first row is the vector reference)
 - NEB default fold excesses (vector = 1×; inserts = 5× if ≤ 200 bp, else 2.5×), each overridable
+- Optional custom default molar fold excess applied to all inserts (beyond the NEB defaults)
 - Editable `v_max` (volume available for fragments)
-- Load the example data, copy results, export CSV
+- Master-mix multiplier: scale volumes for N reactions in the export and printable protocol
+- Load the example data, copy results, export CSV, print a formatted protocol
 - Save / load named presets (stored in your browser via `localStorage`)
 - Runs entirely client-side — no server, no tracking
 

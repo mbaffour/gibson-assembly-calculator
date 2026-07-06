@@ -47,8 +47,8 @@
               <th class="col-act"></th>
             </tr>
           </thead>
-          <tbody id="frag-body"><!-- rows injected by app.js --></tbody>
-          <tfoot>
+          <tbody id="frag-body" aria-live="polite"><!-- rows injected by app.js --></tbody>
+          <tfoot role="status" aria-live="polite">
             <tr class="water-row">
               <td></td>
               <td colspan="4" class="right">Water (H₂O)</td>
@@ -80,6 +80,16 @@
           <input type="number" id="v-max" min="0" step="0.1" value="5" />
           <small>5 µL leaves room for 1.33× master mix.</small>
         </label>
+        <label class="param">
+          <span>Default insert fold excess</span>
+          <input type="number" id="default-fold" min="0" step="0.1" placeholder="NEB auto" />
+          <small>Blank = NEB defaults (5× ≤ 200 bp, else 2.5×). Set a custom molar ratio for all inserts.</small>
+        </label>
+        <label class="param">
+          <span>Master mix — reactions (N)</span>
+          <input type="number" id="n-reactions" min="1" step="1" value="1" />
+          <small>Scale volumes for a master mix of N reactions in the export &amp; protocol.</small>
+        </label>
         <div class="param readout">
           <span>m<sub>max</sub></span>
           <output>100 ng</output>
@@ -102,6 +112,7 @@
       <button id="btn-example" type="button" class="btn">✨ Load example</button>
       <button id="btn-copy" type="button" class="btn">📋 Copy results</button>
       <button id="btn-csv" type="button" class="btn">💾 Export CSV</button>
+      <button id="btn-print" type="button" class="btn">🖨️ Print protocol</button>
       <span class="spacer"></span>
       <input type="text" id="preset-name" class="preset-name" placeholder="Preset name…" aria-label="Preset name" />
       <button id="btn-save" type="button" class="btn">Save</button>
@@ -110,6 +121,28 @@
       <button id="btn-del" type="button" class="btn btn-quiet">Delete</button>
       <span class="spacer"></span>
       <button id="btn-reset" type="button" class="btn btn-quiet">Reset</button>
+    </section>
+
+    <section id="mastermix" class="panel mastermix" aria-labelledby="mm-heading" aria-live="polite" hidden>
+      <h2 id="mm-heading">🧪 Master mix (<span id="mm-n">1</span>× reactions)</h2>
+      <p class="mm-note">Per-fragment and water volumes scaled for <strong><span id="mm-n2">1</span></strong> reactions. Prepare a single mix, then aliquot.</p>
+      <div class="table-scroll">
+        <table id="mm-table">
+          <thead>
+            <tr>
+              <th class="col-label">Component</th>
+              <th class="col-out">Volume ×N<br /><span class="unit">µL</span></th>
+            </tr>
+          </thead>
+          <tbody id="mm-body"><!-- rows injected by app.js --></tbody>
+          <tfoot>
+            <tr class="total-row">
+              <td class="right">Total</td>
+              <td id="mm-total" class="num out-cell">—</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </section>
 
     <details class="panel help">
